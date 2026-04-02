@@ -33,4 +33,8 @@ describe("Counter", function () {
 
     expect(await counter.x()).to.equal(total);
   });
+  it("Should revert when calling the inc() function with a value greater than 10", async function () { 
+    const counter = await ethers.deployContract("Counter");
+    await expect(counter.incBy(0)).to.be.revertedWith("incBy: increment should be positive");
+  });
 });

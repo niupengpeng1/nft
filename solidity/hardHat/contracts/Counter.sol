@@ -16,4 +16,8 @@ contract Counter {
     x += by;
     emit Increment(by);
   }
+
+  function get() public view returns (uint) {
+    return x;
+  }
 }
