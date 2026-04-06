@@ -1,9 +1,6 @@
 import { network } from "hardhat";
 
-const { ethers } = await network.connect({
-  network: "hardhatOp",
-  chainType: "op",
-});
+const { ethers } = await network.connect();
 
 console.log("Sending transaction using the OP chain type");
 
@@ -19,4 +16,5 @@ const tx = await sender.sendTransaction({
 
 await tx.wait();
 
-console.log("Transaction sent successfully");
+console.log("Transaction sent successfully ");
+  

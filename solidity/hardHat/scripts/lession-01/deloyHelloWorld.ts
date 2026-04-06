@@ -1,9 +1,6 @@
 import { network } from "hardhat";
 
-const { ethers } = await network.connect({
-    network: "hardhatOp",
-    chainType: "op",
-});
+const { ethers } = await network.connect();
 
 
 async function main() {
@@ -13,14 +10,15 @@ async function main() {
     console.log("Account balance:", ethers.formatEther(await ethers.provider.getBalance(deployer.address)), "ETH");
     const hellow = await ethers.deployContract("HelloWorld",["你好，世界！"]);
 
+    console.log(await deployer.getNonce());
     await hellow.waitForDeployment();
 
-    console.log("Contract deployed to:", await hellow.getAddress());
+    console.log("Contract deployed to:", await hellow.getAddress(),hellow.target.toString());
 
     console.log("更新前Greeting:", await hellow.getMessage());
 
     await hellow.updateMessage("Hello, Hardhat!");
-    console.log("更新后Greeting:", await hellow.getMessage());
+    console.log("更新后Greeting:", await hellow.getMessage()); 
 
 
      // ==========================================

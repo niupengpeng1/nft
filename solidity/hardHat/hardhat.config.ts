@@ -20,6 +20,14 @@ export default defineConfig({
     },
   },
   networks: {
+
+
+    // ✅ 官方标准：手动声明 localhost（3.x 必须写）
+    localhost: {
+      type: "http",
+      url: "http://127.0.0.1:8545",
+      chainId: 31337,
+    },
     hardhatMainnet: {
       type: "edr-simulated",
       chainType: "l1",
