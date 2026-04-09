@@ -1,0 +1,31 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        
+        {
+            "name": "Launch file",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "${file}",
+             "cwd": "${workspaceFolder}/dapp"
+        },
+        
+        // 或者为 dapp 项目添加单独的配置
+        {
+            "name": "Launch dapp server",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "${workspaceFolder}/dapp/cmd/server/main.go",
+            "cwd": "${workspaceFolder}/dapp",  // 指定工作目录为 dapp 目录
+            "env": {},
+            "args": []
+        }
+
+
+    ]
+}
