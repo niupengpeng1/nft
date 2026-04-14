@@ -24,6 +24,16 @@
             "cwd": "${workspaceFolder}/dapp",  // 指定工作目录为 dapp 目录
             "env": {},
             "args": []
+        },
+         {
+            "name": "Launch demo server",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "${workspaceFolder}/dapp/test/Demo.go",
+            "cwd": "${workspaceFolder}/dapp",  // 指定工作目录为 dapp 目录
+            "env": {},
+            "args": []
         }
 
 

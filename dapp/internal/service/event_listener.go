@@ -891,7 +891,7 @@ func (s *EventListenerService) logToContractEvent(vLog *types.Log) *models.Contr
 		TxHash:          vLog.TxHash.Hex(),
 		BlockNumber:     vLog.BlockNumber,
 		BlockHash:       vLog.BlockHash.Hex(),
-		LogIndex:        uint(vLog.Index),
+		LogIndex:        vLog.Index,
 		Data:            common.Bytes2Hex(vLog.Data),
 		Topics:          string(topicsJSON),
 	}

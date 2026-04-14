@@ -9,6 +9,7 @@ describe("Counter", function () {
 
     await expect(counter.inc()).to.emit(counter, "Increment").withArgs(1n);
   });
+  const myNFT = ethers.getContractAt("MyNFT", "0x0165878A594ca255338adfa4d48449f69242Eb8F");
 
   it("The sum of the Increment events should match the current value", async function () {
     const counter = await ethers.deployContract("Counter");

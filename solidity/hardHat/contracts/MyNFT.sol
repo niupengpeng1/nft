@@ -11,6 +11,8 @@ contract MyNFT  is ERC721 ,ERC721URIStorage ,Ownable {
 
     uint256 public price = 0.01 ether;
 
+    event updatePriceEvent(address indexed owner,uint256   price);
+
     event Mint(address indexed to, uint256 indexed tokenId);
 
     constructor() ERC721("MyNFT", "MNFT") Ownable(msg.sender) {      
@@ -67,6 +69,7 @@ contract MyNFT  is ERC721 ,ERC721URIStorage ,Ownable {
 
     function updatePrice(uint256 _price) external  onlyOwner {
         price = _price;
+        emit updatePriceEvent(msg.sender,price);
     }
 
 }
