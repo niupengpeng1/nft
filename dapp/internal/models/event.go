@@ -17,6 +17,7 @@ type ContractEvent struct {
 	ToAddress       string    `gorm:"size:42" json:"to_address"`
 	Data            string    `gorm:"type:text" json:"data"`
 	Topics          string    `gorm:"type:text" json:"topics"`
+	LogInput        string    `gorm:"type:json" json:"log_input"`
 	Timestamp       time.Time `gorm:"autoCreateTime" json:"timestamp"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`

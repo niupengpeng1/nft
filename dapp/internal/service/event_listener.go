@@ -705,6 +705,9 @@ func (s *EventListenerService) Start() error {
 		return fmt.Errorf("event listener is already running")
 	}
 	s.isRunning = true
+	tx, cancel := context.WithCancel(context.Background())
+	s.ctx = tx
+	s.cancel = cancel
 	s.mu.Unlock()
 
 	// Load last processed block
@@ -800,7 +803,7 @@ func (s *EventListenerService) processBlockRange(from, to uint64) error {
 
 	events := make([]*models.ContractEvent, 0, len(logs))
 	for _, vLog := range logs {
-		event := s.logToContractEvent(&vLog)
+		event := s.logToContractEvent(&vLog, s.client)
 		events = append(events, event)
 	}
 
@@ -813,7 +816,7 @@ func (s *EventListenerService) processBlockRange(from, to uint64) error {
 }
 
 // logToContractEvent converts a types.Log to ContractEvent model
-func (s *EventListenerService) logToContractEvent(vLog *types.Log) *models.ContractEvent {
+func (s *EventListenerService) logToContractEvent(vLog *types.Log, client *ethclient.Client) *models.ContractEvent {
 	if len(vLog.Topics) == 0 {
 		log.Fatalf("无效日志")
 	}
@@ -844,6 +847,7 @@ func (s *EventListenerService) logToContractEvent(vLog *types.Log) *models.Contr
 	// 注意：topicIndex 只针对 indexed 参数计数，不考虑非 indexed 参数
 	indexedParamIndex := 0
 	var topicInputs string
+	var inputJson = make(map[string]interface{})
 	for i, input := range eventSig.Inputs {
 		if !input.Indexed {
 			continue
@@ -865,26 +869,87 @@ func (s *EventListenerService) logToContractEvent(vLog *types.Log) *models.Contr
 			// address 类型：去除前 12 字节的 0 填充，后 20 字节是地址
 			addr := common.BytesToAddress(topic.Bytes())
 			topicInputs += fmt.Sprintf("(%s: %s\n) ", input.Name, addr.Hex())
+			inputJson[input.Name] = addr.Hex()
 			fmt.Printf("%s\n", addr.Hex())
 		case abi.IntTy, abi.UintTy:
 			// 整数类型：直接转换为 big.Int
 			value := new(big.Int).SetBytes(topic.Bytes())
 			topicInputs += fmt.Sprintf("(%s: %s\n) ", input.Name, value.String())
+			inputJson[input.Name] = value.String()
 			fmt.Printf("%s\n", value.String())
 		case abi.BoolTy:
 			// bool 类型：检查最后一个字节
 			topicInputs += fmt.Sprintf("(%s: %t\n) ", input.Name, topic[31] != 0)
+			inputJson[input.Name] = topic[31] != 0
 			fmt.Printf("%t\n", topic[31] != 0)
 		case abi.BytesTy, abi.FixedBytesTy:
 			topicInputs += fmt.Sprintf("(%s: %s\n) ", input.Name, topic.Hex())
+			inputJson[input.Name] = topic.Hex()
 			// bytes 类型：直接显示十六进制
 			fmt.Printf("%s\n", topic.Hex())
 		default:
 			topicInputs += fmt.Sprintf("(%s: %s\n) ", input.Name, topic.Hex())
+			inputJson[input.Name] = topic.Hex()
 			// 其他类型：显示原始十六进制
 			fmt.Printf("%s (raw)\n", topic.Hex())
 		}
 	}
+
+	// Data 字段包含所有非 indexed 参数的编码数据
+	if len(vLog.Data) > 0 {
+		fmt.Printf("\n  Non-Indexed Parameters (from Data):\n")
+
+		// 创建一个结构体来接收解码后的参数
+		// 注意：这里使用通用方法，实际应用中可能需要根据具体事件定义结构体
+		nonIndexedInputs := make([]abi.Argument, 0)
+		for _, input := range eventSig.Inputs {
+			if !input.Indexed {
+				nonIndexedInputs = append(nonIndexedInputs, input)
+			}
+		}
+
+		if len(nonIndexedInputs) > 0 {
+			// 使用 ABI 解码 Data 字段
+			// 方法 1: 使用 UnpackIntoInterface（需要预定义结构体）
+			// 方法 2: 使用 Unpack（返回 []interface{}）
+			values, err := parsedABI.Unpack(eventName, vLog.Data)
+			if err != nil {
+				fmt.Printf("    Error decoding data: %v\n", err)
+			} else {
+				// 只输出非 indexed 参数
+				nonIndexedIdx := 0
+				for i, input := range eventSig.Inputs {
+					if !input.Indexed {
+						if nonIndexedIdx < len(values) {
+							value := values[nonIndexedIdx]
+							fmt.Printf("    [%d] %s (%s): ", i+1, input.Name, input.Type)
+
+							// 根据类型格式化输出
+							switch v := value.(type) {
+							case *big.Int:
+								fmt.Printf("%s\n", v.String())
+								inputJson[input.Name] = v.String()
+							case common.Address:
+								fmt.Printf("%s\n", v.Hex())
+								inputJson[input.Name] = v.Hex()
+							case []byte:
+								fmt.Printf("0x%x\n", v)
+								inputJson[input.Name] = fmt.Sprintf("0x%x", v)
+							default:
+								fmt.Printf("%v\n", v)
+								inputJson[input.Name] = v
+							}
+							nonIndexedIdx++
+						}
+					}
+				}
+			}
+		}
+	} else {
+		fmt.Printf("\n  Non-Indexed Parameters: None\n")
+	}
+
+	jsonData, _ := json.Marshal(inputJson)
 	event := &models.ContractEvent{
 		EventName:       eventName, // Can be enhanced by parsing topic[0]
 		ContractAddress: vLog.Address.Hex(),
@@ -894,12 +959,22 @@ func (s *EventListenerService) logToContractEvent(vLog *types.Log) *models.Contr
 		LogIndex:        vLog.Index,
 		Data:            common.Bytes2Hex(vLog.Data),
 		Topics:          string(topicsJSON),
+		LogInput:        string(jsonData),
 	}
 
-	// Extract from and to addresses if available in topics
-	if len(vLog.Topics) > 1 {
-		// Common pattern: first topic is event signature, second is often from address
-		event.FromAddress = topicInputs
+	tx, pendingFlag, err := client.TransactionByHash(context.Background(), vLog.TxHash)
+	if err != nil {
+		log.Fatalf("获取交易失败: %v", err)
+	}
+	if pendingFlag {
+		log.Fatalf("交易未确认")
+	}
+	from, _ := types.Sender(types.LatestSignerForChainID(tx.ChainId()), tx)
+	event.FromAddress = from.Hex()
+
+	to := tx.To()
+	if to != nil {
+		event.ToAddress = string(to.Hex())
 	}
 
 	return event
