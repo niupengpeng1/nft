@@ -3,6 +3,8 @@ package repository
 import (
 	"dapp/internal/models"
 	"errors"
+	"strings"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -72,4 +74,34 @@ func (r *EventRepository) GetBlockHeight() (uint64, error) {
 		return 0, result.Error
 	}
 	return bh.Height, nil
+}
+
+func (h *EventRepository) QueryAllLogs(dto *models.LogDTO) (interface{}, error) {
+	var logvo []struct {
+		ID              uint
+		EventName       string
+		ContractAddress string
+		TxHash          string
+		BlockNumber     uint64
+		BlockHash       string
+		LogIndex        uint
+		FromAddress     string
+		ToAddress       string
+		LogInput        string
+		Timestamp       time.Time
+		CreatedAt       time.Time
+		UpdatedAt       time.Time
+	}
+	tx := DB.Table("contract_events")
+
+	if strings.TrimSpace(dto.EventName) != "" {
+		tx = tx.Where("event_name = ?", dto.EventName)
+	}
+	tx.Order("block_number desc,event_name desc,log_index desc")
+	tx.Scan(&logvo)
+	if tx.Error != nil {
+		return nil, tx.Error
+	}
+
+	return logvo, nil
 }

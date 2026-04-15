@@ -312,6 +312,25 @@ const myNFTABI = `[
       "type": "event"
     },
     {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "owner",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "price",
+          "type": "uint256"
+        }
+      ],
+      "name": "updatePriceEvent",
+      "type": "event"
+    },
+    {
       "inputs": [
         {
           "internalType": "address",

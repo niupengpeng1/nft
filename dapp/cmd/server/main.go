@@ -68,6 +68,7 @@ func main() {
 		api.GET("/events", eventHandler.GetEvents)
 		api.POST("/start", eventHandler.StartListening)
 		api.POST("/stop", eventHandler.StopListening)
+		api.GET("/query/logs", eventHandler.QueryAllLogs)
 	}
 
 	// Health check endpoint

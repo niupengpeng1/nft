@@ -168,3 +168,33 @@ func (h *EventHandler) GetEventByID(c *gin.Context) {
 		Message: "Not implemented yet",
 	})
 }
+
+func (h *EventHandler) QueryAllLogs(c *gin.Context) {
+
+	queryDTO := models.LogDTO{}
+	if err := c.ShouldBind(&queryDTO); err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			Code:    400,
+			Message: "Invalid request body: " + err.Error(),
+		})
+		return
+	}
+
+	height, err := h.eventRepo.GetBlockHeight()
+	logger.Info("Current block height: %d", height)
+
+	resukt, err := h.eventRepo.QueryAllLogs(&queryDTO)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			Code:    500,
+			Message: "Failed to fetch events: " + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, Response{
+		Code: 200,
+		Data: resukt,
+	})
+}
