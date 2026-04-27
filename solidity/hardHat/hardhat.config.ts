@@ -18,6 +18,9 @@ export default defineConfig({
         },
       },
     },
+    npmFilesToBuild: [
+      "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol"
+    ],
   },
   networks: {
 
